@@ -1,0 +1,176 @@
+---
+description: Investigate, plan, implement, test, and review a TekiHelp development task while preserving the existing architecture.
+---
+
+# TekiHelp Development Implementation
+
+## 1. Task definition
+
+**Objective:**  
+[Describe the exact feature to implement, bug to fix, or improvement to make.]
+
+**Expected outcome:**  
+[Describe what the application should do when the task is completed.]
+
+**Acceptance criteria:**  
+[List the specific conditions that must be satisfied.]
+
+**Additional context:**  
+[Provide relevant information, constraints, examples, or related issues.]
+
+## 2. Investigation
+
+Before modifying any files:
+
+1. Read the repository's `copilot-instructions.md`.
+2. Inspect the existing implementation relevant to the task.
+3. Identify the responsible modules, functions, classes, and their callers.
+4. Trace dependencies and interactions with other components.
+5. Inspect existing tests and identify relevant test coverage.
+6. Check the current Git working tree to distinguish existing user changes from changes made during this task.
+
+For workflow-related changes, trace both Telegram and Discord runners where relevant.
+
+Use the actual repository structure. Do not assume that a file, function, integration, or capability exists without verifying it.
+
+If information is missing, investigate further or explicitly identify the uncertainty. Do not invent requirements or present assumptions as facts.
+
+## 3. Implementation requirements
+
+1. Follow the established TekiHelp architecture.
+2. Keep conversation decisions in the orchestrator, extraction logic in the extraction module, and provider selection in the AI router.
+3. Keep provider-specific behaviour inside the appropriate AI adapters and router.
+4. Reuse existing components and validation mechanisms where appropriate.
+5. Preserve `PartialEvent` and `ValidatedEvent` responsibilities.
+6. Preserve human approval before Watch Folder delivery.
+7. Preserve existing working functionality unless the task explicitly requires a change.
+8. Handle relevant errors, edge cases, and invalid inputs.
+9. Avoid unnecessary dependencies and architectural changes.
+10. Do not assume calendar or WhatsApp integrations are operational unless verified.
+
+## 4. Restrictions and change control
+
+- Modify only files necessary for the requested task.
+- Do not refactor unrelated code.
+- Do not change project structure or rename files without approval.
+- Do not introduce new dependencies without approval.
+- Do not delete existing functionality without approval.
+- Do not modify project documentation unless requested.
+- Do not hardcode credentials or expose secrets.
+- Do not overwrite or discard existing user changes.
+- Do not commit, push, merge, or modify Git history.
+- Do not install packages or alter environment configuration without approval.
+- Do not claim that an untested integration or feature works.
+
+## 5. Implementation workflow
+
+### Phase A: Understand
+
+Explain:
+- Your understanding of the objective.
+- The existing behaviour.
+- The expected behaviour after implementation.
+- Any ambiguities or missing requirements.
+
+### Phase B: Investigate
+
+Identify:
+- Relevant files and their responsibilities.
+- Functions, classes, and callers involved.
+- Dependencies and affected components.
+- Existing tests and potential regression risks.
+
+### Phase C: Plan
+
+Present:
+- The proposed implementation approach.
+- Each file expected to change and why.
+- Any new files or dependencies required.
+- Tests needed to verify the implementation.
+- Potential risks or limitations.
+
+**Approval gate:** Stop here and wait for explicit approval before making significant changes.
+
+For small, isolated changes, you may proceed directly only when the requested behaviour and affected files are unambiguous and the change does not introduce architectural, dependency, security, or workflow risks.
+
+### Phase D: Implement
+
+After approval:
+
+1. Implement only the approved changes.
+2. Follow existing naming conventions and coding patterns.
+3. Keep changes focused and maintainable.
+4. Preserve existing functionality.
+5. Do not silently expand the task's scope.
+
+If implementation reveals that the approved approach needs significant changes, stop and request approval for the revised approach.
+
+### Phase E: Verify
+
+1. Run focused tests for the modified functionality.
+2. Run the relevant broader test suite.
+3. Fix failures introduced by the changes.
+4. Inspect test output and distinguish passing, failing, and skipped tests.
+5. Identify tests that were not run.
+6. Distinguish mocked tests from real external-service integration tests.
+
+Do not modify tests merely to make them pass if doing so weakens the intended behaviour or hides a defect.
+
+### Phase F: Review
+
+Inspect the final Git diff.
+
+Confirm:
+- Only necessary files were changed.
+- No unrelated user changes were overwritten.
+- No credentials or secrets were introduced.
+- Existing behaviour was preserved where required.
+- The implementation matches the approved plan.
+
+Do not commit or push changes.
+
+## 6. Definition of done
+
+The task is complete when:
+
+- The requested functionality has been implemented.
+- The acceptance criteria have been addressed.
+- Relevant tests have been executed.
+- Test results have been accurately reported.
+- Existing functionality has been preserved where required.
+- The final Git diff has been reviewed.
+- Remaining limitations and unverified behaviour have been identified.
+
+## 7. Required completion report
+
+Provide a concise report using this structure:
+
+**1. Implementation summary**
+- What was implemented.
+- How the new or modified functionality works.
+
+**2. Files changed**
+
+For each file, provide:
+- File path.
+- What changed.
+- Why it changed.
+- Modification date.
+
+**3. Testing results**
+- Exact commands executed.
+- Tests passed.
+- Tests failed.
+- Tests skipped.
+- Tests not executed.
+
+**4. Verification**
+- What was actually verified.
+- Whether testing used mocks or real services.
+
+**5. Outstanding issues**
+- Known limitations.
+- Unresolved problems.
+- Additional work requiring approval.
+
+Never claim successful implementation or verification without supporting evidence.
