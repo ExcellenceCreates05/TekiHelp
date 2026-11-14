@@ -91,7 +91,7 @@ Present:
 
 **Approval gate:** Stop here and wait for explicit approval before making significant changes.
 
-For small, isolated changes, you may proceed directly only when the requested behaviour and affected files are unambiguous and the change does not introduce architectural, dependency, security, or workflow risks.
+For small, isolated changes, you may proceed to develop it but first ask for approval before applying. State why and how the changes affect. only when the requested behaviour and affected files are unambiguous and the change does not introduce architectural, dependency, security, or workflow risks.
 
 ### Phase D: Implement
 

@@ -38,4 +38,4 @@
 - Do not claim that a feature, integration, or workflow works unless it has actually been tested.
 - Where real external services are required, distinguish mocked test results from real integration testing.
 - Do not create additional documentation or reports unless requested.
-- For every task, report the files changed, the reason for each change, and the date of the modificationd.
+- For every task, report the files changed, the reason for each change, and the date of the modification date.
