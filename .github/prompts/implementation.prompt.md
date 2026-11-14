@@ -22,7 +22,7 @@ description: Investigate, plan, implement, test, and review a TekiHelp developme
 
 Before modifying any files:
 
-1. Read the repository's `copilot-instructions.md`.
+1. Read the repository's `.github/copilot-instructions.md`.
 2. Inspect the existing implementation relevant to the task.
 3. Identify the responsible modules, functions, classes, and their callers.
 4. Trace dependencies and interactions with other components.

@@ -12,6 +12,7 @@
 - When repository code, tests, and documentation do not establish how something works, investigate further or explicitly identify the uncertainty. Never present assumptions as verified behaviour.
 
 ## Implementation discipline
+- Obtain approval before any and all code modification, not only significant changes.
 - Make only changes necessary for the explicitly requested task.
 - Do not refactor unrelated code, rename files, change project structure, or introduce new dependencies without approval.
 - Before implementing complex workflow changes, inspect the relevant files, callers, dependencies, and tests.
