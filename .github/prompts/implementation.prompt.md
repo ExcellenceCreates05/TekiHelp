@@ -1,6 +1,9 @@
+
 ---
-description: Investigate, plan, implement, test, and review a TekiHelp development task while preserving the existing architecture.
+name: tekihelp-implementation
+description: Investigate, plan, implement, test, and review TekiHelp development tasks while preserving the existing architecture. Use when implementing features, fixing bugs, or modifying the TekiHelp codebase.
 ---
+
 
 # TekiHelp Development Implementation
 
@@ -61,6 +64,8 @@ If information is missing, investigate further or explicitly identify the uncert
 - Do not commit, push, merge, or modify Git history.
 - Do not install packages or alter environment configuration without approval.
 - Do not claim that an untested integration or feature works.
+- Obtain explicit approval before modifying any project file, regardless of the size or complexity of the change.
+- Approval applies only to the specific implementation plan presented and accepted by the user. Any material expansion of scope requires renewed approval.
 
 ## 5. Implementation workflow
 
@@ -82,16 +87,27 @@ Identify:
 
 ### Phase C: Plan
 
-Present:
-- The proposed implementation approach.
-- Each file expected to change and why.
-- Any new files or dependencies required.
-- Tests needed to verify the implementation.
-- Potential risks or limitations.
+**Mandatory approval gate:**
 
-**Approval gate:** Stop here and wait for explicit approval before making significant changes.
+Stop after presenting the implementation plan and wait for explicit user approval before modifying any project file.
 
-For small, isolated changes, you may proceed to develop it but first ask for approval before applying. State why and how the changes affect. only when the requested behaviour and affected files are unambiguous and the change does not introduce architectural, dependency, security, or workflow risks.
+This requirement applies to all changes, regardless of size or complexity, including:
+- Bug fixes.
+- Small code changes.
+- New features.
+- Refactoring.
+- Test modifications.
+- Configuration changes.
+- Dependency changes.
+- Documentation changes.
+
+A request to investigate, explain, diagnose, or propose a solution does not constitute permission to implement it.
+
+Do not create, edit, delete, rename, or overwrite project files before receiving explicit approval.
+
+If the user rejects the proposed plan, revise the plan and request approval again.
+
+If implementation requires changes outside the approved scope, stop and request approval for the revised scope.
 
 ### Phase D: Implement
 
@@ -155,7 +171,7 @@ For each file, provide:
 - File path.
 - What changed.
 - Why it changed.
-- Modification date.
+- Modification date.Whether the file was created or modified, and the date of the change
 
 **3. Testing results**
 - Exact commands executed.
@@ -163,6 +179,9 @@ For each file, provide:
 - Tests failed.
 - Tests skipped.
 - Tests not executed.
+- Exact test commands and their actual outputs or summaries.
+- Any environmental limitations preventing tests from running.
+
 
 **4. Verification**
 - What was actually verified.
