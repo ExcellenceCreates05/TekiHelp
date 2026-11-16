@@ -39,6 +39,7 @@ class Session:
     status: WorkflowStatus = WorkflowStatus.COLLECTING
     pending_preview_path: str | None = None
     iteration_count: int = 0
+    awaiting_final_confirmation: bool = False
     # FIX #4: a lightweight flag the orchestrator sets when it suspects
     # the newest message might start a *second*, unrelated event while
     # the current one is still incomplete. See agent/orchestrator.py.
@@ -56,4 +57,5 @@ class Session:
         self.status = WorkflowStatus.COLLECTING
         self.pending_preview_path = None
         self.iteration_count = 0
+        self.awaiting_final_confirmation = False
         self.awaiting_new_event_confirmation = False

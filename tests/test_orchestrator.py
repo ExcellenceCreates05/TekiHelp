@@ -39,7 +39,7 @@ def test_clarification_asked_when_field_missing():
     assert session.status == WorkflowStatus.COLLECTING
 
 
-def test_render_offered_when_complete(tmp_path, monkeypatch):
+def test_render_offered_only_after_final_confirmation(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "PREVIEW_FOLDER_PATH", tmp_path)
     router = make_router_returning({
         "title": "Men's Breakfast", "date": "2026-10-17", "time": "08:00 AM", "venue": "Main Church",
@@ -50,8 +50,16 @@ def test_render_offered_when_complete(tmp_path, monkeypatch):
 
     reply = orch.handle_message(session, "Men's breakfast Sat 8am Main Church")
 
-    assert reply.offer_approval is True
+    assert reply.offer_approval is False
+    assert session.status == WorkflowStatus.COLLECTING
+    assert session.awaiting_final_confirmation is True
+    assert "confirm" in reply.text.lower()
+    assert "Men's Breakfast" in reply.text
+
+    confirmation = orch.handle_message(session, "yes, that's correct")
+    assert confirmation.offer_approval is True
     assert session.status == WorkflowStatus.AWAITING_APPROVAL
+    assert session.awaiting_final_confirmation is False
 
 
 def test_non_event_does_not_touch_event_state():
@@ -99,7 +107,13 @@ def test_fix3_correction_updates_only_targeted_field(tmp_path, monkeypatch):
 
     assert session.current_event.date == "2026-10-24"
     assert session.current_event.title == "Men's Breakfast"  # untouched fields preserved
-    assert reply.offer_approval is True  # now complete again
+    assert reply.offer_approval is False
+    assert session.awaiting_final_confirmation is True
+    assert "confirm" in reply.text.lower()
+
+    final_reply = orch.handle_message(session, "yes, that's right")
+    assert final_reply.offer_approval is True
+    assert session.status == WorkflowStatus.AWAITING_APPROVAL
 
 
 def test_fix4_concurrent_event_guard_triggers_confirmation():

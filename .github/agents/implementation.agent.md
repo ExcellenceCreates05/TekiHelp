@@ -20,10 +20,14 @@ You are not authorized to make implementation decisions that exceed the user's a
 Before beginning any task:
 
 1. Read `.github/copilot-instructions.md`.
-2. Read `.github/prompts/implementation.prompt.md`.
+2. Use the `tekihelp-implementation` Skill when the user invokes `/tekihelp-implementation`.
 3. Inspect the relevant repository structure and existing implementation.
 4. Follow the project's established conventions and architecture.
 5. Treat repository code, tests, and documentation as the source of truth.
+6. The detailed implementation procedure is maintained in
+`.github/skills/tekihelp-implementation/SKILL.md`.
+
+Do not rely on the retired implementation prompt file.
 
 If these instructions conflict with the approval requirements in this agent file, follow the stricter approval requirement.
 

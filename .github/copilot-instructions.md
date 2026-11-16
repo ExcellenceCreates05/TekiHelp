@@ -12,7 +12,7 @@
 - When repository code, tests, and documentation do not establish how something works, investigate further or explicitly identify the uncertainty. Never present assumptions as verified behaviour.
 
 ## Implementation discipline
-- Obtain approval before any and all code modification, not only significant changes.
+ - Obtain explicit user approval before modifying any project file, regardless of the change's size or complexity.
 - Make only changes necessary for the explicitly requested task.
 - Do not refactor unrelated code, rename files, change project structure, or introduce new dependencies without approval.
 - Before implementing complex workflow changes, inspect the relevant files, callers, dependencies, and tests.
@@ -40,3 +40,4 @@
 - Where real external services are required, distinguish mocked test results from real integration testing.
 - Do not create additional documentation or reports unless requested.
 - For every task, report the files changed, the reason for each change, and the date of the modification date.
+- For every task, report each file created or modified, why it changed, and the date of the change.

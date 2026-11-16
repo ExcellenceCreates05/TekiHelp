@@ -78,6 +78,19 @@ class PartialEvent(BaseModel):
     def is_complete(self) -> bool:
         return len(self.missing_fields()) == 0
 
+    def summary_text(self) -> str:
+        """Return a user-friendly summary of the known event fields."""
+        parts: list[str] = []
+        if self.title:
+            parts.append(f'"{self.title}"')
+        if self.date:
+            parts.append(f"on {self.date}")
+        if self.time:
+            parts.append(f"at {self.time}")
+        if self.venue:
+            parts.append(f"at {self.venue}")
+        return ", ".join(parts) if parts else "the event"
+
     def merge(self, update: "PartialEvent") -> "PartialEvent":
         """Apply a new extraction on top of the existing state; never let a
         newly-null field erase a previously-known one (FIX #4 depends on

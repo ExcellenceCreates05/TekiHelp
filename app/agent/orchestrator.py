@@ -64,6 +64,9 @@ class Orchestrator:
         if session.status == WorkflowStatus.AWAITING_CORRECTION:
             return self._handle_correction_turn(session, message)
 
+        if session.awaiting_final_confirmation:
+            return self._handle_final_confirmation_turn(session, message)
+
         if session.status == WorkflowStatus.AWAITING_APPROVAL:
             # Operator sent text while a preview is pending -- treat it as
             # additional info for the SAME event rather than confusing it.
@@ -115,16 +118,12 @@ class Orchestrator:
             session.add_message("agent", reply.text)
             return reply
 
-        # Rule 1: atomic rendering -- only reachable once is_complete() is true,
-        # and to_validated() cannot construct an object with a missing field.
-        validated = session.current_event.to_validated()
-        preview_path = render_event_graphic(validated)
-        session.pending_preview_path = preview_path
-        session.status = WorkflowStatus.AWAITING_APPROVAL
-
-        caption = f"{validated.title}\n{validated.display_date()} at {validated.time}\n{validated.venue}"
-        reply = AgentReply(text=None, image_path=preview_path, offer_approval=True)
-        session.add_message("agent", f"[sent preview for approval: {caption}]")
+        summary = session.current_event.summary_text()
+        session.awaiting_final_confirmation = True
+        reply = AgentReply(
+            text=f"I have {summary}. Please confirm: is this correct?"
+        )
+        session.add_message("agent", reply.text)
         return reply
 
     # ------------------------------------------------------------------
@@ -148,12 +147,36 @@ class Orchestrator:
             session.add_message("agent", reply.text)
             return reply
 
-        validated = session.current_event.to_validated()
-        preview_path = render_event_graphic(validated)
-        session.pending_preview_path = preview_path
-        session.status = WorkflowStatus.AWAITING_APPROVAL
-        reply = AgentReply(text=None, image_path=preview_path, offer_approval=True)
-        session.add_message("agent", "[sent corrected preview for approval]")
+        summary = session.current_event.summary_text()
+        session.awaiting_final_confirmation = True
+        reply = AgentReply(
+            text=f"I have {summary}. Please confirm: is this correct?"
+        )
+        session.add_message("agent", reply.text)
+        return reply
+
+    def _handle_final_confirmation_turn(self, session: Session, message: str) -> AgentReply:
+        session.awaiting_final_confirmation = False
+        normalized = message.lower()
+        affirmative = any(
+            token in normalized
+            for token in ("yes", "yep", "y", "correct", "right", "looks good", "confirm", "confirmed")
+        )
+
+        if affirmative:
+            validated = session.current_event.to_validated()
+            preview_path = render_event_graphic(validated)
+            session.pending_preview_path = preview_path
+            session.status = WorkflowStatus.AWAITING_APPROVAL
+
+            caption = f"{validated.title}\n{validated.display_date()} at {validated.time}\n{validated.venue}"
+            reply = AgentReply(text=None, image_path=preview_path, offer_approval=True)
+            session.add_message("agent", f"[sent preview for approval: {caption}]")
+            return reply
+
+        session.status = WorkflowStatus.AWAITING_CORRECTION
+        reply = AgentReply(text=REJECTION_FOLLOWUP)
+        session.add_message("agent", reply.text)
         return reply
 
     # ------------------------------------------------------------------

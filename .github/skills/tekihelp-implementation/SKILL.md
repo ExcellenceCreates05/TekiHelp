@@ -1,13 +1,8 @@
 ---
-name: implementation
-description: implementation
+name: tekihelp-implementation
+description: "Use this workflow when investigating, planning, implementing, debugging, refactoring, testing, or reviewing changes to the TekiHelp codebase.While preserving the existing architecture. Use when implementing features, fixing bugs, or modifying the TekiHelp codebase."
 disable-model-invocation: true
 ---
----
-name: tekihelp-implementation
-description: Investigate, plan, implement, test, and review TekiHelp development tasks while preserving the existing architecture. Use when implementing features, fixing bugs, or modifying the TekiHelp codebase.
----
-
 
 # TekiHelp Development Implementation
 
@@ -175,7 +170,9 @@ For each file, provide:
 - File path.
 - What changed.
 - Why it changed.
-- Modification date.Whether the file was created or modified, and the date of the change
+- Whether the file was created or modified.
+- Date of the change.
+- Modification date.
 
 **3. Testing results**
 - Exact commands executed.
