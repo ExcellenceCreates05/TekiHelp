@@ -18,7 +18,7 @@ has no code deliverable -- it consumes what's here.
 - `app/rendering/typography.py`, `app/rendering/engine.py` -- Pillow
   renderer, auto-scaling text
 - `app/broadcast/watch_folder.py` -- FIX #5 (atomic write-then-rename)
-- `scripts/week1_manual_test.py` -- run this first, no Telegram needed
+- `testscripts/week1_manual_test.py` -- run this first, no Telegram needed
 
 **Week 2 -- Statefulness, the ReAct loop, Constitution**
 - `app/models/session.py` -- session state machine
@@ -34,7 +34,7 @@ has no code deliverable -- it consumes what's here.
 - `app/tools/calendar_tool.py` -- read-only clash-checking lookup
 - `app/channels/discord_adapter.py`, `app/channels/discord_runner.py`
   -- second channel via the SAME orchestrator/extraction/rendering code
-- `scripts/week3_temporal_stress_test.py` -- messy real-phrasing
+- `testscripts/week3_temporal_stress_test.py` -- messy real-phrasing
   accuracy test across both engines, feeds Chapter 3/5 evidence
 
 **Week 4 -- WhatsApp (conditional), full test suite**
@@ -98,7 +98,7 @@ Requires a real `GEMINI_API_KEY` and a running `ollama serve` with
 whole purpose is measuring real accuracy.
 
 ```bash
-python scripts/week3_temporal_stress_test.py
+python testscripts /week3_temporal_stress_test.py
 ```
 
 Results land in `output/temporal_stress_results.csv`. Review each row

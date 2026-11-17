@@ -16,6 +16,7 @@ All five build-plan fixes converge here:
 from __future__ import annotations
 
 import logging
+import re
 
 from app import config
 from app.ai.router import InferenceRouter, BothEnginesFailedError
@@ -25,6 +26,25 @@ from app.models.session import Session, WorkflowStatus
 from app.rendering.engine import render_event_graphic
 
 logger = logging.getLogger("tekihelp.orchestrator")
+
+AFFIRMATIVE_FINAL_CONFIRMATIONS = frozenset({
+    "yes",
+    "ndio",
+    "correct",
+    "confirm",
+    "confirmed",
+    "looks good",
+    "iko sawa",
+    "sawa",
+    "sawasawa",
+    "iko poa",
+})
+
+
+def normalize_confirmation_response(message: str) -> str:
+    normalized = message.strip().lower()
+    normalized = re.sub(r"^[^\w]+|[^\w]+$", "", normalized)
+    return re.sub(r"\s+", " ", normalized)
 
 
 class AgentReply:
@@ -42,6 +62,10 @@ class Orchestrator:
 
     def handle_message(self, session: Session, message: str) -> AgentReply:
         session.add_message("user", message)
+
+        # Final confirmation is a control turn, not an extraction attempt.
+        if session.awaiting_final_confirmation:
+            return self._handle_final_confirmation_turn(session, message)
 
         # Rule 8: max-iteration safety cap. Safe termination deliberately
         # means a CLEAN RESTART, not a dead-ended session: reset_event()
@@ -63,9 +87,6 @@ class Orchestrator:
 
         if session.status == WorkflowStatus.AWAITING_CORRECTION:
             return self._handle_correction_turn(session, message)
-
-        if session.awaiting_final_confirmation:
-            return self._handle_final_confirmation_turn(session, message)
 
         if session.status == WorkflowStatus.AWAITING_APPROVAL:
             # Operator sent text while a preview is pending -- treat it as
@@ -157,11 +178,8 @@ class Orchestrator:
 
     def _handle_final_confirmation_turn(self, session: Session, message: str) -> AgentReply:
         session.awaiting_final_confirmation = False
-        normalized = message.lower()
-        affirmative = any(
-            token in normalized
-            for token in ("yes", "yep", "y", "correct", "right", "looks good", "confirm", "confirmed")
-        )
+        normalized = normalize_confirmation_response(message)
+        affirmative = normalized in AFFIRMATIVE_FINAL_CONFIRMATIONS
 
         if affirmative:
             validated = session.current_event.to_validated()

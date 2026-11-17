@@ -11,7 +11,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app import config
-from app.agent.orchestrator import Orchestrator
+from app.agent.orchestrator import (
+    AFFIRMATIVE_FINAL_CONFIRMATIONS,
+    Orchestrator,
+    normalize_confirmation_response,
+)
 from app.models.session import Session, WorkflowStatus
 
 
@@ -56,10 +60,89 @@ def test_render_offered_only_after_final_confirmation(tmp_path, monkeypatch):
     assert "confirm" in reply.text.lower()
     assert "Men's Breakfast" in reply.text
 
-    confirmation = orch.handle_message(session, "yes, that's correct")
+    confirmation = orch.handle_message(session, "yes")
     assert confirmation.offer_approval is True
     assert session.status == WorkflowStatus.AWAITING_APPROVAL
     assert session.awaiting_final_confirmation is False
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "yes",
+        " YES ",
+        "ndio",
+        "correct",
+        "confirm",
+        "confirmed",
+        "looks good",
+        "iko sawa",
+        "sawa",
+        "sawasawa",
+        "iko poa",
+        "  Looks   Good!  ",
+    ],
+)
+def test_only_explicit_affirmatives_render(tmp_path, monkeypatch, message):
+    monkeypatch.setattr(config, "PREVIEW_FOLDER_PATH", tmp_path)
+    router = make_router_returning({
+        "title": "Men's Breakfast",
+        "date": "2026-10-17",
+        "time": "08:00 AM",
+        "venue": "Main Church",
+        "is_event": True,
+        "possible_new_event": False,
+    })
+    orch = Orchestrator(router)
+    session = Session(session_key=f"affirmative:{message}", channel="test", chat_id="2")
+    session.current_event.title = "Men's Breakfast"
+    session.current_event.date = "2026-10-17"
+    session.current_event.time = "08:00 AM"
+    session.current_event.venue = "Main Church"
+    session.awaiting_final_confirmation = True
+    session.iteration_count = 2
+
+    reply = orch.handle_message(session, message)
+
+    assert reply.offer_approval is True
+    assert session.status == WorkflowStatus.AWAITING_APPROVAL
+    assert session.awaiting_final_confirmation is False
+    assert session.iteration_count == 2
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "no",
+        "no, it is on Monday",
+        "incorrect",
+        "yesterday",
+        "yes, on Monday",
+        "not correct",
+        "maybe",
+        "",
+    ],
+)
+def test_unlisted_or_negative_confirmations_request_correction(message):
+    orch = Orchestrator(MagicMock())
+    session = Session(session_key=f"negative:{message}", channel="test", chat_id="3")
+    session.awaiting_final_confirmation = True
+    session.iteration_count = 2
+
+    reply = orch.handle_message(session, message)
+
+    assert reply.offer_approval is False
+    assert session.status == WorkflowStatus.AWAITING_CORRECTION
+    assert session.awaiting_final_confirmation is False
+    assert session.iteration_count == 2
+
+
+def test_confirmation_normalization_is_exact():
+    assert normalize_confirmation_response("  Looks   Good!  ") == "looks good"
+    assert normalize_confirmation_response("YES!") == "yes"
+    assert normalize_confirmation_response("yes, actually") == "yes, actually"
+    assert "yes" in AFFIRMATIVE_FINAL_CONFIRMATIONS
+    assert "yep" not in AFFIRMATIVE_FINAL_CONFIRMATIONS
 
 
 def test_non_event_does_not_touch_event_state():
@@ -111,7 +194,7 @@ def test_fix3_correction_updates_only_targeted_field(tmp_path, monkeypatch):
     assert session.awaiting_final_confirmation is True
     assert "confirm" in reply.text.lower()
 
-    final_reply = orch.handle_message(session, "yes, that's right")
+    final_reply = orch.handle_message(session, "confirmed")
     assert final_reply.offer_approval is True
     assert session.status == WorkflowStatus.AWAITING_APPROVAL
 
