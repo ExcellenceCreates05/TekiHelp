@@ -50,10 +50,19 @@ def normalize_confirmation_response(message: str) -> str:
 class AgentReply:
     """What the orchestrator hands back to the channel adapter to send."""
 
-    def __init__(self, text: str | None = None, image_path: str | None = None, offer_approval: bool = False) -> None:
+    def __init__(
+        self,
+        text: str | None = None,
+        image_path: str | None = None,
+        offer_approval: bool = False,
+        approved_path: str | None = None,
+        rejected_path: str | None = None,
+    ) -> None:
         self.text = text
         self.image_path = image_path
         self.offer_approval = offer_approval
+        self.approved_path = approved_path
+        self.rejected_path = rejected_path
 
 
 class Orchestrator:
@@ -102,6 +111,12 @@ class Orchestrator:
     # Branch: normal slot-filling (Observe -> Reason -> Act)
     # ------------------------------------------------------------------
     def _handle_collecting_turn(self, session: Session, message: str) -> AgentReply:
+        if session.status == WorkflowStatus.AWAITING_APPROVAL:
+            session.pending_preview_path = None
+            session.pending_preview_id = None
+            session.status = WorkflowStatus.COLLECTING
+            session.awaiting_final_confirmation = False
+
         try:
             outcome = extract(self._router, session, message)
         except BothEnginesFailedError:
@@ -140,6 +155,8 @@ class Orchestrator:
             return reply
 
         summary = session.current_event.summary_text()
+        session.pending_preview_path = None
+        session.pending_preview_id = None
         session.awaiting_final_confirmation = True
         reply = AgentReply(
             text=f"I have {summary}. Please confirm: is this correct?"
@@ -151,6 +168,11 @@ class Orchestrator:
     # Branch: FIX #3 -- after a Reject, next message is a targeted correction
     # ------------------------------------------------------------------
     def _handle_correction_turn(self, session: Session, message: str) -> AgentReply:
+        session.pending_preview_path = None
+        session.pending_preview_id = None
+        session.status = WorkflowStatus.COLLECTING
+        session.awaiting_final_confirmation = False
+
         try:
             outcome = extract(self._router, session, message)
         except BothEnginesFailedError:
@@ -169,6 +191,8 @@ class Orchestrator:
             return reply
 
         summary = session.current_event.summary_text()
+        session.pending_preview_path = None
+        session.pending_preview_id = None
         session.awaiting_final_confirmation = True
         reply = AgentReply(
             text=f"I have {summary}. Please confirm: is this correct?"
@@ -184,7 +208,10 @@ class Orchestrator:
         if affirmative:
             validated = session.current_event.to_validated()
             preview_path = render_event_graphic(validated)
+            preview_name = preview_path.replace("\\", "/").rsplit("/", 1)[-1]
+            preview_id = preview_name.removeprefix("preview_").removesuffix(".png")
             session.pending_preview_path = preview_path
+            session.pending_preview_id = preview_id
             session.status = WorkflowStatus.AWAITING_APPROVAL
 
             caption = f"{validated.title}\n{validated.display_date()} at {validated.time}\n{validated.venue}"
@@ -216,7 +243,9 @@ class Orchestrator:
     # ------------------------------------------------------------------
     def handle_rejection(self, session: Session) -> AgentReply:
         session.status = WorkflowStatus.AWAITING_CORRECTION
+        rejected_path = session.pending_preview_path
         reply = AgentReply(text=REJECTION_FOLLOWUP)
+        reply.rejected_path = rejected_path
         session.add_message("agent", reply.text)
         return reply
 
@@ -228,7 +257,9 @@ class Orchestrator:
     # ------------------------------------------------------------------
     def handle_approval(self, session: Session) -> AgentReply:
         session.status = WorkflowStatus.COMPLETED
+        approved_path = session.pending_preview_path
         self._router.reset_stickiness(session.session_key)
         reply = AgentReply(text="Approved. Sending to the broadcast system.")
+        reply.approved_path = approved_path
         session.add_message("agent", reply.text)
         return reply

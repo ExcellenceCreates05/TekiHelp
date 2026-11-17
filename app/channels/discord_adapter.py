@@ -1,9 +1,7 @@
 """
 Discord channel adapter (Week 3, Day 17-19) -- the stretch second channel.
 
-Chosen over WhatsApp Cloud API for the 3-to-5-week window because it
-needs zero business-verification lead time: a bot token from the
-Discord Developer Portal is usable in minutes. Implements the same
+Discord implements the same
 ChannelAdapter interface as Telegram, so the orchestrator, extraction,
 rendering, and Watch Folder code are reused completely unchanged.
 """
@@ -18,21 +16,32 @@ from app.channels.base import ChannelAdapter
 
 
 class ApprovalView(discord.ui.View):
-    def __init__(self, on_approve, on_reject, chat_id: str):
+    def __init__(self, on_approve, on_reject, chat_id: str, preview_id: str):
         super().__init__(timeout=None)
         self._on_approve = on_approve
         self._on_reject = on_reject
         self._chat_id = chat_id
+        self._preview_id = preview_id
 
     @discord.ui.button(label="Approve", style=discord.ButtonStyle.success)
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._on_approve(self._chat_id)
-        await interaction.response.send_message("Approved.", ephemeral=True)
+        await self._on_approve(
+            self._chat_id,
+            str(interaction.user.id),
+            self._preview_id,
+            interaction,
+            self,
+        )
 
     @discord.ui.button(label="Reject", style=discord.ButtonStyle.danger)
     async def reject(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._on_reject(self._chat_id)
-        await interaction.response.send_message("Rejected -- tell me what to correct.", ephemeral=True)
+        await self._on_reject(
+            self._chat_id,
+            str(interaction.user.id),
+            self._preview_id,
+            interaction,
+            self,
+        )
 
 
 class DiscordAdapter(ChannelAdapter):
@@ -45,17 +54,29 @@ class DiscordAdapter(ChannelAdapter):
 
     def is_authorized(self, chat_id: str) -> bool:
         if not config.DISCORD_AUTHORIZED_CHANNEL_IDS:
-            return True
+            return config.ALLOW_OPEN_ACCESS
         return str(chat_id) in config.DISCORD_AUTHORIZED_CHANNEL_IDS
+
+    def is_operator_authorized(self, user_id: str) -> bool:
+        if not config.DISCORD_AUTHORIZED_USER_IDS:
+            return False
+        return str(user_id) in config.DISCORD_AUTHORIZED_USER_IDS
 
     async def send_text(self, chat_id: str, text: str) -> None:
         channel = self._client.get_channel(int(chat_id))
         await channel.send(text)
 
-    async def send_image_with_approval_buttons(self, chat_id: str, image_path: str, caption: str) -> None:
+    async def send_image_with_approval_buttons(
+        self,
+        chat_id: str,
+        image_path: str,
+        caption: str,
+        preview_id: str | None = None,
+    ) -> None:
         channel = self._client.get_channel(int(chat_id))
         with open(image_path, "rb") as f:
             data = io.BytesIO(f.read())
         file = discord.File(data, filename="preview.png")
-        view = ApprovalView(self._on_approve, self._on_reject, chat_id)
+        preview_id = preview_id or "expired"
+        view = ApprovalView(self._on_approve, self._on_reject, chat_id, preview_id)
         await channel.send(content=caption, file=file, view=view)

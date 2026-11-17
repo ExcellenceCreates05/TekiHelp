@@ -16,6 +16,8 @@ from app.agent.orchestrator import (
     Orchestrator,
     normalize_confirmation_response,
 )
+from app.channels.discord_adapter import DiscordAdapter
+from app.channels.telegram_adapter import TelegramAdapter
 from app.models.session import Session, WorkflowStatus
 
 
@@ -232,6 +234,32 @@ def test_fix4_confirmation_yes_resets_event():
     assert session.current_event.title is None  # reset happened
 
 
+def test_editing_pending_preview_clears_preview_and_id(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "PREVIEW_FOLDER_PATH", tmp_path)
+    router = make_router_returning({
+        "title": "Men's Breakfast",
+        "date": "2026-10-24",
+        "time": "09:00 AM",
+        "venue": "Main Church",
+        "is_event": True,
+        "possible_new_event": False,
+    })
+    orch = Orchestrator(router)
+    session = Session(session_key="stale-preview", channel="test", chat_id="9")
+    session.status = WorkflowStatus.AWAITING_APPROVAL
+    session.pending_preview_path = "/old/preview_abc123.png"
+    session.pending_preview_id = "abc123"
+    session.current_event.title = "Men's Breakfast"
+    session.current_event.date = "2026-10-17"
+    session.current_event.time = "08:00 AM"
+    session.current_event.venue = "Main Church"
+
+    orch.handle_message(session, "The time changed to 9am")
+
+    assert session.pending_preview_path is None
+    assert session.pending_preview_id is None
+
+
 def test_rule8_max_iterations_terminates_safely():
     router = make_router_returning({
         "title": None, "date": None, "time": None, "venue": None,
@@ -251,3 +279,23 @@ def test_rule8_max_iterations_terminates_safely():
     assert session.current_event.title is None
     assert session.iteration_count == 0
     assert "start over" in reply.text.lower()
+
+
+def test_submission_and_operator_allowlists_fail_closed(monkeypatch):
+    monkeypatch.setattr(config, "TELEGRAM_AUTHORIZED_CHAT_IDS", set())
+    monkeypatch.setattr(config, "DISCORD_AUTHORIZED_CHANNEL_IDS", set())
+    monkeypatch.setattr(config, "TELEGRAM_AUTHORIZED_USER_IDS", set())
+    monkeypatch.setattr(config, "DISCORD_AUTHORIZED_USER_IDS", set())
+    monkeypatch.setattr(config, "ALLOW_OPEN_ACCESS", False)
+
+    telegram = TelegramAdapter.__new__(TelegramAdapter)
+    discord = DiscordAdapter.__new__(DiscordAdapter)
+
+    assert telegram.is_authorized("123") is False
+    assert telegram.is_operator_authorized("456") is False
+    assert discord.is_authorized("789") is False
+    assert discord.is_operator_authorized("012") is False
+
+    monkeypatch.setattr(config, "ALLOW_OPEN_ACCESS", True)
+    assert telegram.is_authorized("123") is True
+    assert discord.is_authorized("789") is True

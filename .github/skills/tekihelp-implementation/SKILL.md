@@ -48,7 +48,7 @@ If information is missing, investigate further or explicitly identify the uncert
 7. Preserve existing working functionality unless the task explicitly requires a change.
 8. Handle relevant errors, edge cases, and invalid inputs.
 9. Avoid unnecessary dependencies and architectural changes.
-10. Do not assume calendar or WhatsApp integrations are operational unless verified.
+10. Do not assume calendar integrations are operational unless verified.
 
 ## 4. Restrictions and change control
 

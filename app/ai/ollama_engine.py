@@ -18,7 +18,10 @@ class OllamaEngine:
     name = "ollama"
 
     def __init__(self) -> None:
-        self._client = ollama.Client(host=config.OLLAMA_HOST)
+        self._client = ollama.Client(
+            host=config.OLLAMA_HOST,
+            timeout=config.OLLAMA_TIMEOUT_S,
+        )
         self._model = config.OLLAMA_MODEL
 
     def generate(self, prompt: str, *, timeout_s: float = 30.0) -> str:
@@ -35,6 +38,7 @@ class OllamaEngine:
                 model=self._model,
                 prompt=prompt,
                 format="json",
+                think=False,
                 options={"temperature": 0.1},
             )
         except Exception as exc:

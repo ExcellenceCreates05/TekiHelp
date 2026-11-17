@@ -12,6 +12,8 @@ import pytest
 from app.ai.gemini import GeminiRateLimitError, GeminiUnavailableError
 from app.ai.router import BothEnginesFailedError, InferenceRouter
 from app.ai.ollama_engine import OllamaUnavailableError
+from app.ai.gemini import GeminiEngine, GeminiTimeoutError
+from app.ai.ollama_engine import OllamaEngine
 
 
 @pytest.fixture
@@ -83,3 +85,41 @@ def test_both_engines_fail_raises(router_with_fakes):
     router_with_fakes._ollama.generate.side_effect = OllamaUnavailableError("down too")
     with pytest.raises(BothEnginesFailedError):
         router_with_fakes.generate_structured("s5", "prompt")
+
+
+def test_gemini_config_passes_real_http_timeout(monkeypatch):
+    engine = GeminiEngine.__new__(GeminiEngine)
+    engine._model = "test-model"
+    engine._client = MagicMock()
+    engine._client.models.generate_content.return_value.text = '{"title":"X"}'
+
+    engine.generate("prompt", timeout_s=7.5)
+
+    call = engine._client.models.generate_content.call_args
+    config = call.kwargs["config"]
+    assert config.http_options.timeout == 7500
+
+
+@pytest.mark.parametrize("message", ["503", "502 Server Error", "504", "request timed out"])
+def test_gemini_service_status_maps_to_timeout(message):
+    engine = GeminiEngine.__new__(GeminiEngine)
+    engine._model = "test-model"
+    engine._client = MagicMock()
+    engine._client.models.generate_content.side_effect = RuntimeError(message)
+
+    with pytest.raises(GeminiTimeoutError):
+        engine.generate("prompt")
+
+
+def test_ollama_generate_disables_thinking_and_uses_json():
+    engine = OllamaEngine.__new__(OllamaEngine)
+    engine._model = "qwen3:4b"
+    engine._client = MagicMock()
+    engine._client.generate.return_value = {"response": '{"title":"X"}'}
+
+    result = engine.generate("prompt")
+
+    assert result == '{"title":"X"}'
+    call = engine._client.generate.call_args
+    assert call.kwargs["think"] is False
+    assert call.kwargs["format"] == "json"

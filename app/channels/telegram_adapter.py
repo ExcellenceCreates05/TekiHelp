@@ -24,20 +24,30 @@ class TelegramAdapter(ChannelAdapter):
 
     def is_authorized(self, chat_id: str) -> bool:
         if not config.TELEGRAM_AUTHORIZED_CHAT_IDS:
-            # No allowlist configured: allow everyone (fine for dev, NOT for
-            # production -- set TELEGRAM_AUTHORIZED_CHAT_IDS before the beta test).
-            return True
+            return config.ALLOW_OPEN_ACCESS
         return str(chat_id) in config.TELEGRAM_AUTHORIZED_CHAT_IDS
+
+    def is_operator_authorized(self, user_id: str) -> bool:
+        if not config.TELEGRAM_AUTHORIZED_USER_IDS:
+            return False
+        return str(user_id) in config.TELEGRAM_AUTHORIZED_USER_IDS
 
     async def send_text(self, chat_id: str, text: str) -> None:
         await self._app.bot.send_message(chat_id=chat_id, text=text)
 
-    async def send_image_with_approval_buttons(self, chat_id: str, image_path: str, caption: str) -> None:
+    async def send_image_with_approval_buttons(
+        self,
+        chat_id: str,
+        image_path: str,
+        caption: str,
+        preview_id: str | None = None,
+    ) -> None:
+        preview_id = preview_id or "expired"
         keyboard = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("Approve", callback_data="approve"),
-                    InlineKeyboardButton("Reject", callback_data="reject"),
+                    InlineKeyboardButton("Approve", callback_data=f"approve:{preview_id}"),
+                    InlineKeyboardButton("Reject", callback_data=f"reject:{preview_id}"),
                 ]
             ]
         )

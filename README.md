@@ -37,11 +37,9 @@ has no code deliverable -- it consumes what's here.
 - `testscripts/week3_temporal_stress_test.py` -- messy real-phrasing
   accuracy test across both engines, feeds Chapter 3/5 evidence
 
-**Week 4 -- WhatsApp (conditional), full test suite**
-- `app/channels/whatsapp_adapter.py` -- only wire this in if Meta
-  Business verification cleared (started Week 1 Day 1); requires a
-  separate webhook receiver not included here (see file docstring)
-- `tests/` -- 25 passing tests covering the event schema, the router's
+**Week 4 -- supported channels and full test suite**
+- Telegram and Discord are the supported channel integrations.
+- `tests/` -- automated tests cover the event schema, the router's
   failure/stickiness behavior, the orchestrator's branches (including
   every numbered fix), and atomic Watch Folder delivery
 
@@ -112,8 +110,6 @@ results.
   confirmation on an apparent second event; it is NOT full topic-shift
   detection. A cleverly-phrased second event could still slip through
   undetected.
-- WhatsApp is conditional on external verification lead time outside
-  your control -- documented as a known risk from Week 1, Day 1.
 - The SQLite message history save in `database.py` uses a delete-then-
   reinsert strategy per turn (simple, correct, but not efficient at
   scale) -- fine for single-control-room conversation volumes.
@@ -147,7 +143,6 @@ tekihelp/
 │   │   ├── telegram_adapter.py
 │   │   ├── discord_adapter.py
 │   │   ├── discord_runner.py
-│   │   └── whatsapp_adapter.py     # conditional, Week 4
 │   ├── rendering/
 │   │   ├── engine.py
 │   │   └── typography.py
@@ -161,7 +156,7 @@ tekihelp/
 ├── scripts/
 │   ├── week1_manual_test.py
 │   └── week3_temporal_stress_test.py
-├── tests/                          # 25 passing tests
+├── tests/
 ├── output/{previews,approved}/
 ├── watch_folder/
 ├── .env.example

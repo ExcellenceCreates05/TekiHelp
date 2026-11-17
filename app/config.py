@@ -32,6 +32,13 @@ def _env_list(key: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _env_bool(key: str, default: bool = False) -> bool:
+    raw = os.environ.get(key)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 # --- Gemini ---
 GEMINI_API_KEY = _env("GEMINI_API_KEY")
 GEMINI_MODEL = _env("GEMINI_MODEL", "gemini-2.0-flash")
@@ -39,14 +46,19 @@ GEMINI_MODEL = _env("GEMINI_MODEL", "gemini-2.0-flash")
 # --- Ollama ---
 OLLAMA_HOST = _env("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = _env("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_TIMEOUT_S = _env_int("OLLAMA_TIMEOUT_S", 60)
 
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = _env("TELEGRAM_BOT_TOKEN")
 TELEGRAM_AUTHORIZED_CHAT_IDS = set(_env_list("TELEGRAM_AUTHORIZED_CHAT_IDS"))
+TELEGRAM_AUTHORIZED_USER_IDS = set(_env_list("TELEGRAM_AUTHORIZED_USER_IDS"))
 
 # --- Discord ---
 DISCORD_BOT_TOKEN = _env("DISCORD_BOT_TOKEN")
 DISCORD_AUTHORIZED_CHANNEL_IDS = set(_env_list("DISCORD_AUTHORIZED_CHANNEL_IDS"))
+DISCORD_AUTHORIZED_USER_IDS = set(_env_list("DISCORD_AUTHORIZED_USER_IDS"))
+ALLOW_OPEN_ACCESS = _env_bool("ALLOW_OPEN_ACCESS", False)
+DELIVERY_CLAIM_TIMEOUT_S = _env_int("DELIVERY_CLAIM_TIMEOUT_S", 120)
 
 # --- Paths (resolved to absolute paths relative to project root) ---
 WATCH_FOLDER_PATH = BASE_DIR / _env("WATCH_FOLDER_PATH", "./watch_folder").lstrip("./")

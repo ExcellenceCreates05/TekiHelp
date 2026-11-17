@@ -19,6 +19,8 @@ class WorkflowStatus(str, Enum):
     AWAITING_APPROVAL = "awaiting_approval"  # rendered, waiting on operator
     AWAITING_CORRECTION = "awaiting_correction"  # FIX #3: rejected, waiting for what to fix
     COMPLETED = "completed"            # approved and delivered
+    DELIVERING = "delivering"
+    DELIVERED = "delivered"
     ENDED = "ended"                    # non-event or terminated
 
 
@@ -38,6 +40,8 @@ class Session:
     current_event: PartialEvent = field(default_factory=PartialEvent)
     status: WorkflowStatus = WorkflowStatus.COLLECTING
     pending_preview_path: str | None = None
+    pending_preview_id: str | None = None
+    version: int = 0
     iteration_count: int = 0
     awaiting_final_confirmation: bool = False
     # FIX #4: a lightweight flag the orchestrator sets when it suspects
@@ -56,6 +60,7 @@ class Session:
         self.current_event = PartialEvent()
         self.status = WorkflowStatus.COLLECTING
         self.pending_preview_path = None
+        self.pending_preview_id = None
         self.iteration_count = 0
         self.awaiting_final_confirmation = False
         self.awaiting_new_event_confirmation = False

@@ -45,13 +45,23 @@ class GeminiEngine:
                 config=genai_types.GenerateContentConfig(
                     temperature=0.1,  # low temperature: we want consistent extraction, not creativity
                     response_mime_type="application/json",
+                    http_options=genai_types.HttpOptions(
+                        timeout=int(timeout_s * 1000),
+                    ),
                 ),
             )
         except Exception as exc:  # google-genai raises various exception types
             msg = str(exc).lower()
             if "429" in msg or "quota" in msg or "rate" in msg:
                 raise GeminiRateLimitError(str(exc)) from exc
-            if "timeout" in msg or "deadline" in msg:
+            if (
+                "timeout" in msg
+                or "timed out" in msg
+                or "deadline" in msg
+                or "502" in msg
+                or "503" in msg
+                or "504" in msg
+            ):
                 raise GeminiTimeoutError(str(exc)) from exc
             raise GeminiUnavailableError(str(exc)) from exc
 

@@ -7,7 +7,7 @@
 - `PartialEvent` represents an event in progress; `ValidatedEvent` is the renderer's input.
 - The active runners use `SQLiteSessionStore` from `app.storage.database` for persistence.
 - Rendering creates previews. Approved delivery goes through `app.broadcast.watch_folder.deliver_to_watch_folder`, called by the channel approval handlers.
-- Do not assume calendar or WhatsApp support is wired into the live workflow merely because related modules exist.
+- Do not assume calendar support is wired into the live workflow merely because related modules exist.
 - Manual scripts currently live in `testscripts/`, not `scripts/`.
 - When repository code, tests, and documentation do not establish how something works, investigate further or explicitly identify the uncertainty. Never present assumptions as verified behaviour.
 

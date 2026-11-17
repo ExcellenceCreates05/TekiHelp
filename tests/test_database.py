@@ -7,7 +7,12 @@ import pytest
 
 from app.models.event import PartialEvent
 from app.models.session import Message, Session, WorkflowStatus
-from app.storage.database import SCHEMA_VERSION, SQLiteSessionStore
+from app.storage.database import (
+    SCHEMA_VERSION,
+    SQLiteSessionStore,
+    SessionHistoryMismatchError,
+    StaleSessionError,
+)
 
 
 def create_legacy_database(path: Path) -> None:
@@ -203,3 +208,181 @@ def test_failed_save_rolls_back_session_and_event_updates(tmp_path):
     assert reloaded.status == WorkflowStatus.COLLECTING
     assert reloaded.current_event.title == "Original event"
     assert reloaded.history == []
+
+
+def test_save_rejects_stale_session_version(tmp_path):
+    db_path = tmp_path / "version.db"
+    store = SQLiteSessionStore(str(db_path))
+    first = store.get_or_create("telegram", "version")
+    second = store.get_or_create("telegram", "version")
+
+    first.add_message("user", "first")
+    store.save(first)
+
+    second.add_message("user", "stale")
+    with pytest.raises(StaleSessionError):
+        store.save(second)
+
+
+def test_save_rejects_history_mismatch(tmp_path):
+    db_path = tmp_path / "history.db"
+    store = SQLiteSessionStore(str(db_path))
+    session = store.get_or_create("telegram", "history")
+    session.history = [Message(role="user", content="one")]
+    store.save(session)
+
+    session.history.clear()
+    with pytest.raises(SessionHistoryMismatchError):
+        store.save(session)
+
+
+def test_approval_preserves_event_and_starts_next_event_row(tmp_path):
+    db_path = tmp_path / "approval.db"
+    store = SQLiteSessionStore(str(db_path))
+    session = store.get_or_create("telegram", "approved")
+    session.current_event = PartialEvent(
+        title="Approved Breakfast",
+        date="2026-10-17",
+        time="08:00 AM",
+        venue="Main Church",
+    )
+    session.status = WorkflowStatus.COMPLETED
+    store.save(session)
+
+    reloaded = store.get_or_create("telegram", "approved")
+    assert reloaded.status == WorkflowStatus.COLLECTING
+    assert reloaded.current_event.title is None
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        rows = conn.execute(
+            """SELECT title, date, time, venue, status
+               FROM events WHERE session_key = ? ORDER BY id""",
+            ("telegram:approved",),
+        ).fetchall()
+
+    assert rows == [
+        ("Approved Breakfast", "2026-10-17", "08:00 AM", "Main Church", "approved"),
+        (None, None, None, None, "collecting"),
+    ]
+
+
+def test_foreign_keys_and_indexes_exist(tmp_path):
+    db_path = tmp_path / "hygiene.db"
+    store = SQLiteSessionStore(str(db_path))
+    store.get_or_create("telegram", "hygiene")
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+
+        indexes = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='index'"
+            )
+        }
+        assert "idx_messages_session_id" in indexes
+        assert "idx_events_session_id" in indexes
+        assert "idx_graphics_session" in indexes
+
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """INSERT INTO messages
+                   (session_key, role, content, timestamp)
+                   VALUES (?, 'user', 'orphan', 'now')""",
+                ("telegram:missing",),
+            )
+
+
+def test_legacy_pending_preview_is_cleared(tmp_path):
+    db_path = tmp_path / "legacy-preview.db"
+    create_legacy_database(db_path)
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """UPDATE sessions
+               SET status='awaiting_approval', pending_preview_path='preview.png'
+               WHERE session_key='telegram:legacy'""",
+        )
+
+    store = SQLiteSessionStore(str(db_path))
+    session = store.get_or_create("telegram", "legacy")
+
+    assert session.pending_preview_path is None
+    assert session.pending_preview_id is None
+    assert session.status == WorkflowStatus.COLLECTING
+
+
+def test_concurrent_claim_delivers_once_and_failure_is_recoverable(tmp_path):
+    db_path = tmp_path / "claim.db"
+    first_store = SQLiteSessionStore(str(db_path))
+    session = first_store.get_or_create("telegram", "claim")
+    session.status = WorkflowStatus.AWAITING_APPROVAL
+    session.pending_preview_path = "preview_abc123.png"
+    session.pending_preview_id = "abc123"
+    first_store.save(session)
+
+    first_store = SQLiteSessionStore(str(db_path))
+    second_store = SQLiteSessionStore(str(db_path))
+    first_claim = first_store.claim_preview(
+        "telegram:claim", "abc123", "approve", 120
+    )
+    second_claim = second_store.claim_preview(
+        "telegram:claim", "abc123", "approve", 120
+    )
+
+    assert first_claim is not None
+    assert second_claim is None
+    assert first_store.fail_delivery(
+        "telegram:claim",
+        "abc123",
+        "preview_abc123.png",
+        first_claim,
+    )
+
+    retry_claim = second_store.claim_preview(
+        "telegram:claim", "abc123", "approve", 120
+    )
+    assert retry_claim is not None
+    assert first_store.complete_delivery(
+        "telegram:claim",
+        "abc123",
+        "preview_abc123.png",
+        "watch_folder/preview_abc123.png",
+        retry_claim,
+    )
+    assert not second_store.complete_delivery(
+        "telegram:claim",
+        "abc123",
+        "preview_abc123.png",
+        "watch_folder/preview_abc123.png",
+        retry_claim,
+    )
+
+
+def test_expired_claim_can_be_claimed_again(tmp_path):
+    db_path = tmp_path / "expired.db"
+    store = SQLiteSessionStore(str(db_path))
+    session = store.get_or_create("telegram", "expired")
+    session.status = WorkflowStatus.AWAITING_APPROVAL
+    session.pending_preview_path = "preview_expired.png"
+    session.pending_preview_id = "expired"
+    store.save(session)
+
+    first_claim = store.claim_preview(
+        "telegram:expired", "expired", "approve", -1
+    )
+    assert first_claim is not None
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """UPDATE sessions
+               SET status='delivering',
+                   claim_expires_at='2000-01-01T00:00:00+00:00'
+               WHERE session_key='telegram:expired'"""
+        )
+
+    retry_claim = store.claim_preview(
+        "telegram:expired", "expired", "approve", 120
+    )
+    assert retry_claim is not None

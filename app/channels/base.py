@@ -20,7 +20,13 @@ class ChannelAdapter(ABC):
         ...
 
     @abstractmethod
-    async def send_image_with_approval_buttons(self, chat_id: str, image_path: str, caption: str) -> None:
+    async def send_image_with_approval_buttons(
+        self,
+        chat_id: str,
+        image_path: str,
+        caption: str,
+        preview_id: str | None = None,
+    ) -> None:
         """Sends the rendered preview with Approve/Reject controls."""
         ...
 
